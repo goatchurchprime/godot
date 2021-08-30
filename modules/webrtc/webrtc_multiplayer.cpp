@@ -41,6 +41,9 @@ void WebRTCMultiplayer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_peer", "peer_id"), &WebRTCMultiplayer::get_peer);
 	ClassDB::bind_method(D_METHOD("get_peers"), &WebRTCMultiplayer::get_peers);
 	ClassDB::bind_method(D_METHOD("close"), &WebRTCMultiplayer::close);
+	ClassDB::bind_method(D_METHOD("set_server_relay_enabled", "enabled"), &WebRTCMultiplayer::set_server_relay_enabled);
+	ClassDB::bind_method(D_METHOD("is_server_relay_enabled"), &WebRTCMultiplayer::is_server_relay_enabled);
+        // why isn't refuse_connections included
 }
 
 void WebRTCMultiplayer::set_transfer_mode(TransferMode p_mode) {
@@ -288,12 +291,32 @@ Error WebRTCMultiplayer::get_packet(const uint8_t **r_buffer, int &r_buffer_size
 		_find_next_peer();
 		ERR_FAIL_V(ERR_UNAVAILABLE);
 	}
+
+    int channel_number = 0; 
 	for (List<Ref<WebRTCDataChannel> >::Element *E = peer_map[next_packet_peer]->channels.front(); E; E = E->next()) {
-		if (E->get()->get_available_packet_count()) {
+        if (E->get()->get_available_packet_count()) {
 			Error err = E->get()->get_packet(r_buffer, r_buffer_size);
+
+            // relay message on correct channel on other peers
+            if (server_relay) {
+                for (Map<int, Ref<ConnectedPeer> >::Element *F = peer_map.front(); F; F = F->next()) { 
+                    if (F->key() == next_packet_peer)
+                        continue; // don't send to source peer
+
+                    int ichannel_number = 0; 
+                    for (List<Ref<WebRTCDataChannel> >::Element *pE = F->value()->channels.front(); pE; pE = pE->next()) {
+                        if (ichannel_number == channel_number) {
+                            pE->get()->put_packet(*r_buffer, r_buffer_size);
+                            break; 
+                        }
+                        ichannel_number++; 
+                    }
+                }
+            }
 			_find_next_peer();
-			return err;
+            return err;
 		}
+        channel_number++; 
 	}
 	// Channels for that peer were empty. Bug?
 	_find_next_peer();
@@ -375,8 +398,21 @@ WebRTCMultiplayer::WebRTCMultiplayer() {
 	refuse_connections = false;
 	connection_status = CONNECTION_DISCONNECTED;
 	server_compat = false;
+    server_relay = false; 
 }
 
 WebRTCMultiplayer::~WebRTCMultiplayer() {
 	close();
 }
+
+void WebRTCMultiplayer::set_server_relay_enabled(bool p_enabled) {
+	ERR_FAIL_COND_MSG(!peer_map.empty(), "Server relaying can't be toggled while clients are connected.");
+	ERR_FAIL_COND_MSG(p_enabled && !is_server(), "Server relay can only be enabled on server.");
+
+	server_relay = p_enabled;
+}
+
+bool WebRTCMultiplayer::is_server_relay_enabled() const {
+	return server_relay;
+}
+

@@ -71,6 +71,7 @@ private:
 	TransferMode transfer_mode;
 	int next_packet_peer;
 	bool server_compat;
+	bool server_relay;
 
 	Map<int, Ref<ConnectedPeer> > peer_map;
 
@@ -109,6 +110,8 @@ public:
 
 	void set_refuse_new_connections(bool p_enable);
 	bool is_refusing_new_connections() const;
+	void set_server_relay_enabled(bool p_enabled);
+	bool is_server_relay_enabled() const;
 
 	ConnectionStatus get_connection_status() const;
 };
