@@ -190,6 +190,13 @@
 				Returns the speaker configuration.
 			</description>
 		</method>
+		<method name="get_time_since_last_input_write" qualifiers="const" experimental="">
+			<return type="float" />
+			<description>
+				Returns the relative time in seconds since the audio driver most recently finished writing a block of captured audio into the input buffer. Returns [code]-1.0[/code] if no input block has been written since the input buffer was initialized.
+				This measures when captured audio became available to the engine. It does not include a hardware capture timestamp and therefore does not identify when the sound reached the microphone.
+			</description>
+		</method>
 		<method name="get_time_since_last_mix" qualifiers="const">
 			<return type="float" />
 			<description>

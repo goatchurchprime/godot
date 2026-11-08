@@ -103,11 +103,20 @@ double AudioDriver::get_time_to_next_mix() {
 	return mix_buffer - total;
 }
 
+double AudioDriver::get_time_since_last_input_write() {
+	const uint64_t last_input_write_time = _last_input_write_time.load(std::memory_order_relaxed);
+	if (last_input_write_time == 0) {
+		return -1.0;
+	}
+	return (OS::get_singleton()->get_ticks_usec() - last_input_write_time) / 1000000.0;
+}
+
 void AudioDriver::input_buffer_init(int driver_buffer_frames) {
 	const int input_buffer_channels = 2;
 	input_buffer.resize(driver_buffer_frames * input_buffer_channels * 4);
 	input_position = 0;
 	input_size = 0;
+	_last_input_write_time.store(0, std::memory_order_relaxed);
 }
 
 void AudioDriver::input_buffer_write(int32_t sample) {
@@ -124,6 +133,12 @@ void AudioDriver::input_buffer_write(int32_t sample) {
 		// This cannot have happened unless two non-locked threads entered function simultaneously, which was possible when multiple calls to
 		// `AudioDriver::input_start()` did not raise an error condition.
 		WARN_PRINT("input_buffer_write: Invalid input_position=" + itos(input_position) + " input_buffer.size()=" + itos(input_buffer.size()));
+	}
+}
+
+void AudioDriver::input_buffer_write_complete() {
+	if (OS::get_singleton()) {
+		_last_input_write_time.store(OS::get_singleton()->get_ticks_usec(), std::memory_order_relaxed);
 	}
 }
 
@@ -1811,6 +1826,10 @@ double AudioServer::get_time_since_last_mix() const {
 	return AudioDriver::get_singleton()->get_time_since_last_mix();
 }
 
+double AudioServer::get_time_since_last_input_write() const {
+	return AudioDriver::get_singleton()->get_time_since_last_input_write();
+}
+
 double AudioServer::get_absolute_time() const {
 	return absolute_time;
 }
@@ -2206,6 +2225,7 @@ void AudioServer::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_time_to_next_mix"), &AudioServer::get_time_to_next_mix);
 	ClassDB::bind_method(D_METHOD("get_time_since_last_mix"), &AudioServer::get_time_since_last_mix);
+	ClassDB::bind_method(D_METHOD("get_time_since_last_input_write"), &AudioServer::get_time_since_last_input_write);
 	ClassDB::bind_method(D_METHOD("get_absolute_time"), &AudioServer::get_absolute_time);
 	ClassDB::bind_method(D_METHOD("get_output_latency"), &AudioServer::get_output_latency);
 

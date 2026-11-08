@@ -259,6 +259,7 @@ OSStatus AudioDriverCoreAudio::input_callback(void *inRefCon,
 				ad->input_buffer_write(sample);
 			}
 		}
+		ad->input_buffer_write_complete();
 	} else {
 		ERR_PRINT("AudioUnitRender failed, code: " + itos(result));
 	}

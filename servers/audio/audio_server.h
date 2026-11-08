@@ -49,6 +49,7 @@ class AudioDriver {
 	static AudioDriver *singleton;
 	uint64_t _last_mix_time = 0;
 	uint64_t _last_mix_frames = 0;
+	std::atomic<uint64_t> _last_input_write_time{ 0 };
 
 #ifdef DEBUG_ENABLED
 	SafeNumeric<uint64_t> prof_ticks;
@@ -64,6 +65,7 @@ protected:
 	void update_mix_time(int p_frames);
 	void input_buffer_init(int driver_buffer_frames);
 	void input_buffer_write(int32_t sample);
+	void input_buffer_write_complete();
 
 	int _get_configured_mix_rate();
 
@@ -78,6 +80,7 @@ protected:
 public:
 	double get_time_since_last_mix(); //useful for video -> audio sync
 	double get_time_to_next_mix();
+	double get_time_since_last_input_write();
 
 	enum SpeakerMode {
 		SPEAKER_MODE_STEREO,
@@ -485,6 +488,7 @@ public:
 	virtual double get_output_latency() const;
 	virtual double get_time_to_next_mix() const;
 	virtual double get_time_since_last_mix() const;
+	virtual double get_time_since_last_input_write() const;
 	virtual double get_absolute_time() const;
 
 	void add_listener_changed_callback(AudioCallback p_callback, void *p_userdata);

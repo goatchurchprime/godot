@@ -547,6 +547,7 @@ void AudioDriverPulseAudio::thread_func(void *p_udata) {
 							ad->input_buffer_write(sample);
 						}
 					}
+					ad->input_buffer_write_complete();
 
 					read_bytes += bytes;
 					ret = pa_stream_drop(ad->pa_rec_str);

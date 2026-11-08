@@ -923,6 +923,7 @@ void AudioDriverWASAPI::thread_func(void *p_udata) {
 						ad->input_buffer_write(l);
 						ad->input_buffer_write(r);
 					}
+					ad->input_buffer_write_complete();
 
 					read_frames += num_frames_available;
 
